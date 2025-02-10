@@ -1,12 +1,14 @@
 import tkinter as tk
 from tkinter import messagebox
+from unittest import result
+
 import requests
 import configparser
 from dotenv import load_dotenv
 import os
+import sys
 
 load_dotenv()
-
 
 def save_token(token, id, email, avatar):
     config = configparser.ConfigParser()
@@ -56,12 +58,19 @@ def fetch_user_data():
 
     try:
         response = requests.get(dashboard_url, headers=headers, params=params)
+        response.headers["content-type"].strip().startswith("application/json")
         response.raise_for_status()
 
+        #messagebox.showerror("ijin debug bro", response.json())
         result = response.json()
+        # messagebox.showerror("Mode Debug", result)
+        if not result.get('status'):
+            messagebox.showerror("Error", result.get('message', 'Unknown error'))
+            return None, saved_config
+
         user_data = result.get('data', {}).get('user', {})
 
-        # Ensure user_data is a dictionary
+
         if not isinstance(user_data, dict):
             user_data = {}
 
@@ -84,6 +93,7 @@ def create_label_and_value(frame, row, label_text, value_text, default_value='N/
 
 def show_dashboard():
     user_data, saved_config = fetch_user_data()
+
     if user_data is None:
         return
 
@@ -115,10 +125,18 @@ def show_dashboard():
         import list
         list.list_page()
 
+    # Pindahkan fungsi on_close ke sini
+    def on_close():
+        if messagebox.askokcancel("Exit", "Do you really want to close the application?"):
+            root.destroy()
+            sys.exit()  # Akhiri program secara eksplisit
+
     root = tk.Tk()
     root.title("Dashboard")
 
-    # Frame for Session Data
+    # Hubungkan tombol close ke fungsi on_close
+    root.protocol("WM_DELETE_WINDOW", on_close)
+
     session_frame = tk.LabelFrame(root, text="Session Data", padx=10, pady=10)
     session_frame.pack(padx=10, pady=10, fill="both", expand="yes")
 
@@ -127,7 +145,6 @@ def show_dashboard():
     create_label_and_value(session_frame, 2, "Session Token", token)
     create_label_and_value(session_frame, 3, "Session Avatar", avatar)
 
-    # Frame for API Data
     api_frame = tk.LabelFrame(root, text="API Data", padx=10, pady=10)
     api_frame.pack(padx=10, pady=10, fill="both", expand="yes")
 
@@ -140,6 +157,9 @@ def show_dashboard():
 
     list_button = tk.Button(root, text="Go to List", command=go_to_list)
     list_button.pack(pady=5)
+
+    # Tambahkan pemanggilan go_to_list() setelah jendela ditampilkan
+    # root.after(100, go_to_list)  # Menjadwalkan go_to_list() untuk dipanggil setelah 100ms
 
     root.mainloop()
 
